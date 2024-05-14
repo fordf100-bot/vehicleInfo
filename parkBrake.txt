@@ -1,0 +1,28 @@
+void parkBrake() {
+  if (gear == 0 && applied1 == 0) {  // if in Park...
+    applied2 = 0;
+    unsigned char stmp2[8] = {0x01, 0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}; //stop releasing command, no need to send apply cmd
+    CAN.sendMsgBuf(0x254, 0, 8, stmp2);
+    digitalWrite(epkb1, HIGH);  // simulate parking brake switch pull (see GM factory diagrams)
+    digitalWrite(epkb2, LOW); // simulate parking brake switch #2
+    epkbTimer = millis();
+    applied1 = 1;
+    Serial3.print("q"); //silence sounds
+  }
+  if (gear != 0 && applied2 == 0) {
+    applied1 = 0;
+    digitalWrite(epkb1, LOW); // simulate parking brake switch press
+    digitalWrite(epkb2, HIGH); // simulate parking brake switch #2 
+    unsigned char stmp[8] = {0x03, 0xAE, 0x01, 0x10, 0x00, 0x00, 0x00, 0x00}; //release command (releases slow w/o this)
+    CAN.sendMsgBuf(0x254, 0, 8, stmp);
+    epkbTimer = millis();
+    applied2 = 1;
+  }
+
+  if (millis() - epkbTimer > 10000) {  
+    digitalWrite(epkb1, LOW); // simulate parking brake switch release
+    digitalWrite(epkb2, LOW);  // simulate parking brake switch #2 release
+  }
+
+ 
+}

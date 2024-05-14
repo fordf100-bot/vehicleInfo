@@ -1,0 +1,59 @@
+// Initialize these variables
+int i = 0;
+int j = 0;
+int counter = 0;
+unsigned char stmp202[8] = {0x30, 0x03, 0, 0x00, 0x00, 0, 0x19, 0x93};//emulated TACHO+VSS message
+unsigned char stmp2170[8] = {0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xD0, 0xFC};//emulated ABS to STEERING Message
+unsigned long lastSend = 0;
+
+
+
+void steering() {
+
+  if (igState < 3) { //if engine not running power steer off
+    stmp202[0] = 0x00;
+  }
+
+  if (igState == 3) { //if engine running power steer on
+    stmp202[0] = 0x30;
+  }
+
+
+  if ((millis() - lastSend > 20)) {
+
+    vssRaw = static_cast<uint16_t>(vss * 100);  //scale and convert from vehicle speed (float) in MPH, Adjusting the scaling value will adjust how stiff the steering is for a            						//given vehicle speed
+    
+    stmp202[2] = (vssRaw >> 8) & 0xFF;  
+    stmp202[3] = vssRaw & 0xFF;          
+
+
+
+    CAN.sendMsgBuf(0x202, 0, 8, stmp202); // Send both can messages
+    CAN.sendMsgBuf(0x217, 0, 8, stmp2170);
+
+
+    lastSend = millis();
+
+
+    i = stmp2170[6];  // Calculate the rolling counters
+    i = i + 1;
+    j = stmp2170[7];
+    j = j - 1;
+
+
+    if (stmp2170[6] == 223) {
+      stmp2170[6] = 0xD0;  //Reset counters
+      stmp2170[7] = 0xFC;
+      i = stmp2170[6];
+      j = stmp2170[7];
+
+    }
+
+
+    stmp2170[6] = i; //save rolling counter values to be sent next time
+    stmp2170[7] = j;
+
+
+  }
+
+}
